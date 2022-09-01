@@ -1,19 +1,23 @@
 from mymodules import Driver
 from mymodules import mqttConnect
-mqttConnect.connectMqtt()
+from mymodules import Passenger
 
 while True:
     print("----------------")
     print("a) register driver")
     print("b) send")
     print("d) delete driver fingerprint")
+    print("da) clear driver database")
+    print("dp) clear passenger database")
   
     z = input("> ")
 
     if z == "a":
-        Driver.getDriverFingerPrint("28-156159v28")
+        Passenger.getTemplate()
     if z == "d":
         Driver.delete_fingerprint()
-    if z == "b":
-        mqttConnect.driverMqtt("testing")
+    if z == "da":
+        Driver.clearDriverInfo()
+    if z == "dp":
+        Passenger.clearDriverInfo()
   

@@ -1,30 +1,40 @@
 import tkinter as tk
+from mymodules import mqttConnect
+from mymodules import setMessage
+from mymodules import ride
+from mymodules import Driver
+from mymodules import Passenger
+from mymodules import doorlock
+from mymodules import panic
+import threading
 
+doorlock.doorlock("lock")
+def test():
+    print("working")
+    setMessage.setMess("hgfd")
 window = tk.Tk()
 frame = tk.Frame(window)
 frame.pack()
 
 bottomframe = tk.Frame(window)
 bottomframe.pack( side = tk.BOTTOM )
+setMessage.setFrame(frame)
 
 
-def ride():
-  var.set("ride pressed")
-def arrival():
-  var.set("arrival pressed")
-def panic():
-  var.set("driver panic")
-window.geometry('850x580') 
-var = tk.StringVar()
-display = tk.Message( frame, textvariable=var,font = "250",fg="white",bg="Navyblue",width=500,pady=10)
-Ride =  tk.Button(bottomframe, text="Ride",command=ride,activebackground="blue",bg="green",height=10,width=30)
-Arrival =  tk.Button(bottomframe, text="Arrival",command=arrival,activebackground="blue",bg="green",height=10,width=30)
-Panic = tk.Button(bottomframe, text="Panic",command=panic,activebackground="blue",bg="red",height=10,width=30)
+window.geometry('850x580')
+window.config(bg='#222222')
 
-display.pack(side=tk.TOP)
-var.set("Welcome to Our safe taxis")
+
+Ride =  tk.Button(bottomframe, text="Ride",command=lambda:threading.Thread(target=ride.rideAuth).start(),activebackground="blue",bg="green",height=10,width=30)
+Arrival =  tk.Button(bottomframe, text="Arrival",command=lambda:threading.Thread(target=ride.arrivalAuth).start(),activebackground="blue",bg="green",height=10,width=30)
+Panic = tk.Button(bottomframe, text="Panic",command=lambda:threading.Thread(target=panic.panic).start(),activebackground="blue",bg="red",height=10,width=30)
+
+
 Ride.pack(side=tk.RIGHT)
 Arrival.pack(side=tk.LEFT)
 Panic.pack()
+
+#threading.Thread(target=mqttConnect.connectMqtt())
+mqttConnect.connectMqtt()
 window.mainloop()
 

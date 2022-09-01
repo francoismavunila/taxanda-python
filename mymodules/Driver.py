@@ -6,11 +6,14 @@ import base64
 import json
 import sqlite3
 import datetime
+from mymodules import getSeatNumber
+from mymodules import setMessage
 from pyfingerprint.pyfingerprint import PyFingerprint
 
+import * as vscode from 'vscode'
+import commands from 'copy-with-line-numbers'
 
-
-dbconnect = sqlite3.connect("taxanda.db");
+dbconnect = sqlite3.connect("taxanda.db",check_same_thread=False);
 dbconnect.row_factory = sqlite3.Row;
 #now we create a cursor to work with db
 cursor = dbconnect.cursor()
@@ -30,11 +33,11 @@ except Exception as e:
 ## Gets some sensor information
 print('Currently used templates: ' + str(d.getTemplateCount()) +'/'+ str(d.getStorageCapacity()))
 
-def getDriverFingerPrint(driver_id):
+def enrollDriverFingerPrint(driver_id):
       ## Tries to enroll new finger
     try:
         print('Waiting for finger...')
-
+        setMessage.setMess("Driver place your finger on the sensor")
         ## Wait that finger is read
         while ( d.readImage() == False ):
             pass
@@ -48,18 +51,22 @@ def getDriverFingerPrint(driver_id):
 
         if ( positionNumber >= 0 ):
             print('Template already exists at position #' + str(positionNumber))
-            exit(0)
+            setMessage.setMess("your fingerprint is already enrolled, first delete the enroll fingerprint")
+            return 301
 
         print('Remove finger...')
-        time.sleep(2)
+        setMessage.setMess("Remove Finger")
+        time.sleep(1)
 
         print('Waiting for same finger again...')
+        setMessage.setMess("place the same finger again")
 
         ## Wait that finger is read again
         while ( d.readImage() == False ):
             pass
         
         print('Downloading image (this take a while)...')
+        setMessage.setMess("we are acquiring the information, wait....")
 
         imageDestination =  tempfile.gettempdir() + '/driver.bmp'
         d.downloadImage(imageDestination)
@@ -69,8 +76,9 @@ def getDriverFingerPrint(driver_id):
         d.convertImage(0x02)
 
         ## Compares the charbuffers
-        if ( d.compareCharacteristics() == 0 ):
-            raise Exception('Fingers do not match')
+        #if ( d.compareCharacteristics() == 0 ):
+            #raise Exception('Fingers do not match')
+            #setMessage.setMess("enrollment failed, fingerprint data not properly captured, make sure you are steady and your hands are clean")
 
         ## Creates a template
         d.createTemplate()
@@ -95,6 +103,7 @@ def getDriverFingerPrint(driver_id):
             "driver_id":driver_id,
             "data":dataBase64.decode()
         }
+        setMessage.setMess("Done")
         print(dat)
         print(dataBase64)
         my_json_object = json.dumps(dat)
@@ -139,3 +148,47 @@ def delete_fingerprint():
         print('Operation failed!')
         print('Exception message: ' + str(e))
         exit(1)
+def clearDriverInfo():
+    d.clearDatabase()
+    
+
+def getDriverFingerPrint():
+    if getSeatNumber.getDriverSeat()==0:
+        setMessage.setMess("driver's seat empty")
+        return 301
+    cursor.execute('SELECT Id FROM Count WHERE Present==1')
+    rows = cursor.fetchall()
+    if(len(rows)!=getSeatNumber.getSeatNumber()):
+        setMessage.setMess("the number of enrolled passengers is not equal to the number of passengers in the taxi")
+        return 301
+
+    try:
+        setMessage.setMess("Driver place your finger on the sensor")
+        print('Waiting for finger...')
+        ## Wait that finger is read
+        while ( d.readImage() == False ):
+            pass
+
+        ## Converts read image to characteristics and stores it in charbuffer 1
+        d.convertImage(0x01)
+        print('one')
+        ## Searchs template
+        result = d.searchTemplate()
+        print('two')
+        positionNumber = result[0]
+        accuracyScore = result[1]
+        print('three')
+        if ( positionNumber == -1 ):
+            print('No match found!')
+            setMessage.setMess("Your finger doesn't match try again")
+            return 301
+        else:
+            print('Found template at position #' + str(positionNumber))
+            print('The accuracy score is: ' + str(accuracyScore))
+            setMessage.setMess("here")
+            return positionNumber
+    except Exception as e:
+        print('Operation failed!')
+        print('Exception message: ' + str(e))
+        setMessage.setMess("error, contact technician +263783857780")
+        return 301

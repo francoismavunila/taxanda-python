@@ -2,11 +2,19 @@
 import time
 import paho.mqtt.client as paho
 from paho import mqtt
+from mymodules import setMessage
 from mymodules import Driver
+import sqlite3
+
+dbconnect = sqlite3.connect("taxanda.db",check_same_thread=False);
+dbconnect.row_factory = sqlite3.Row;
+#now we create a cursor to work with db
+cursor = dbconnect.cursor()
 
 # setting callbacks for different events to see if it works, print the message etc.
 def on_connect(client, userdata, flags, rc, properties=None):
     print("CONNACK received with code %s." % rc)
+    setMessage.setMess("Mqtt Connected")
 
 # with this callback you can see if your publish was successful
 def on_publish(client, userdata, mid, properties=None):
@@ -21,9 +29,23 @@ def on_message(client, userdata, msg):
     print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
     if msg.topic=="driver/register/1010/getFP":
        print(msg.payload.decode())
-       Driver.getDriverFingerPrint(msg.payload.decode())
+       Driver.enrollDriverFingerPrint(msg.payload.decode())
     elif msg.topic == "/testback":
       print("we are testing")
+    elif msg.topic=="activity/1010/depart/done":
+        rowid=msg.payload.decode()
+        print(rowid)
+        sql_update_query = """Update activity set sent = ? where Id = ?"""
+        data = (1, rowid)
+        cursor.execute(sql_update_query, data)
+        dbconnect.commit()
+    elif msg.topic=="activity/1010/arrival/done":
+        rowid=msg.payload.decode()
+        print(rowid)
+        sql_update_query = """Update activity set sentArrival = ? where Id = ?"""
+        data = (1, rowid)
+        cursor.execute(sql_update_query, data)
+        dbconnect.commit()
     elif msg.topic == "registration":
       print("checking the driver reg status")
       print(msg.payload.decode())
@@ -36,6 +58,7 @@ def on_message(client, userdata, msg):
     #Driver.getDriverFingerPrint()
 def on_disconnect(client, userdata, rc):
     print("Disconnected" % rc)
+    setMessage.setMess("Mqtt Disconnected")
 def connectMqtt():
     
     # using MQTT version 5 here, for 3.1.1: MQTTv311, 3.1: MQTTv31
@@ -61,6 +84,7 @@ def connectMqtt():
     client.subscribe("/testback", qos=1)
     client.subscribe("driver/register/1010/getFP", qos=1)
     client.subscribe("registration", qos=1)
+    client.subscribe("activity/1010/depart/done", qos=1)
 
     # a single publish, this can also be done in loops, etc.
 
